@@ -1,8 +1,3 @@
-# A sample Guardfile
-# More info at https://github.com/guard/guard#readme
-
-require 'active_support/core_ext'
-
 guard 'spork', :cucumber_env => { 'RAILS_ENV' => 'test' }, :rspec_env => { 'RAILS_ENV' => 'test' } do
   watch('config/application.rb')
   watch('config/environment.rb')
@@ -15,48 +10,41 @@ guard 'spork', :cucumber_env => { 'RAILS_ENV' => 'test' }, :rspec_env => { 'RAIL
   watch(%r{features/support/}) { :cucumber }
 end
 
-guard 'rspec', :all_after_pass => false, :cli => '--drb' do
-  watch(%r{^spec/.+_spec\.rb$})
-  watch(%r{^lib/(.+)\.rb$})     { |m| "spec/lib/#{m[1]}_spec.rb" }
-  watch('spec/spec_helper.rb')  { "spec" }
+group 'tests-with-spork' do
 
-  # Rails example
-  watch(%r{^app/(.+)\.rb$})                           { |m| "spec/#{m[1]}_spec.rb" }
-  watch(%r{^app/(.*)(\.erb|\.haml)$})                 { |m| "spec/#{m[1]}#{m[2]}_spec.rb" }
-  watch(%r{^app/controllers/(.+)_(controller)\.rb$})  { |m| ["spec/routing/#{m[1]}_routing_spec.rb", "spec/#{m[2]}s/#{m[1]}_#{m[2]}_spec.rb", "spec/acceptance/#{m[1]}_spec.rb"] }
-  watch(%r{^spec/support/(.+)\.rb$})                  { "spec" }
-  watch('config/routes.rb')                           { "spec/routing" }
-  watch('app/controllers/application_controller.rb')  { "spec/controllers" }
+  guard 'rspec', :cli => "--drb", :all_after_pass => false do
+    watch('spec/spec_helper.rb') { "spec" }
 
-  # Capybara features specs
-  watch(%r{^app/views/(.+)/.*\.(erb|haml)$})          { |m| "spec/features/#{m[1]}_spec.rb" }
-  
-  watch(%r{^app/controllers/(.+)_(controller)\.rb$}) do |m|
-    ["spec/routing/#{m[1]}_routing_spec.rb",
-     "spec/#{m[2]}s/#{m[1]}_#{m[2]}_spec.rb",
-     "spec/acceptance/#{m[1]}_spec.rb",
-     "spec/requests/#{m[1].singularize}_pages_spec.rb",
-     (m[1][/_pages/] ? "spec/requests/#{m[1]}_spec.rb" :
-                       "spec/requests/#{m[1].singularize}_pages_spec.rb")]
+    watch(%r{^spec/controllers/.+_spec\.rb$})
+    watch(%r{^spec/models/.+integration_spec\.rb$})
+    watch(%r{^spec/helpers/.+_spec\.rb$})
+    watch(%r{^spec/routing/.+_spec\.rb$})
+    watch(%r{^spec/requests/.+_spec\.rb$})
+
+    watch(%r{^app/models/(.+)\.rb$}) { |m| "spec/models/#{m[1]}_integration_spec.rb" }
+    watch(%r{^app/helpers/(.+)\.rb$}) { |m| "spec/helpers/#{m[1]}_spec.rb" }
+    watch(%r{^app/controllers/(.+)_(controller)\.rb$}) do |m|
+      [
+              "spec/routing/#{m[1]}_routing_spec.rb",
+              "spec/#{m[2]}s/#{m[1]}_#{m[2]}_spec.rb"
+      ]
+    end
+
+    watch(%r{^spec/support/(.+)\.rb$}) { "spec" }
+    watch('config/routes.rb') { "spec/routing" }
+    watch('app/controllers/application_controller.rb') { "spec/controllers" }
+
+    watch(%r{^spec/lib/.+_integration_spec\.rb$})
   end
-  
-  watch(%r{^app/views/(.+)/}) do |m|
-    "spec/requests/#{m[1].singularize}_pages_spec.rb"
-  end
-
-  # Turnip features and steps
-  watch(%r{^spec/acceptance/(.+)\.feature$})
-  watch(%r{^spec/acceptance/steps/(.+)_steps\.rb$})   { |m| Dir[File.join("**/#{m[1]}.feature")][0] || 'spec/acceptance' }
 end
 
-guard :test, :drb => true do
-  watch(%r{^lib/(.+)\.rb$})     { |m| "test/#{m[1]}_test.rb" }
-  watch(%r{^test/.+_test\.rb$})
-  watch('test/test_helper.rb')  { "test" }
+group 'unit-tests' do
+  guard 'rspec', :all_on_start => false, :all_after_pass => false, :bundler => false do
+    watch(%r{^lib/(.+)\.rb$}) { |m| "spec/lib/#{m[1]}_spec.rb" }
 
-  # Rails example
-  watch(%r{^app/models/(.+)\.rb$})                   { |m| "test/unit/#{m[1]}_test.rb" }
-  watch(%r{^app/controllers/(.+)\.rb$})              { |m| "test/functional/#{m[1]}_test.rb" }
-  watch(%r{^app/views/.+\.rb$})                      { "test/integration" }
-  watch('app/controllers/application_controller.rb') { ["test/functional", "test/integration"] }
+    # ?<! Negative lookbehind assertion: ensures that the preceding characters do not match 'integration',
+    # but doesn't include those characters in the matched text
+    watch(%r{^spec/models/.*(?<!integration)_spec\.rb$})
+    watch(%r{^spec/lib/.*(?<!integration)_spec\.rb$})
+  end
 end
