@@ -13,3 +13,5 @@
 //= require jquery
 //= require jquery_ujs
 //= require_tree .
+//= require supersized.3.2.7
+//= require jquery.easing
